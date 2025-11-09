@@ -74,18 +74,23 @@
 }
 
 /* Date input - make calendar bigger */
+.date-input::-webkit-calendar-picker-indicator {
+  width: 40px;
+  height: 40px;
+  font-size: 2rem;
+  cursor: pointer;
+}
+.date-input {
+  min-height: 56px;
+  font-size: 1.2rem;
+}
 .date-input {
   font-size: 1.1rem;
   padding: 1rem;
   min-height: 50px;
 }
 
-.date-input::-webkit-calendar-picker-indicator {
-  width: 24px;
-  height: 24px;
-  cursor: pointer;
-  opacity: 1;
-}
+
 
 /* Guests select - remove gray background */
 .guests-select {

@@ -23,7 +23,11 @@ export interface Restaurant {
   };
   dietaryOptions?: string[]; // e.g., ['vegetarian', 'vegan', 'gluten-free']
   features?: string[]; // e.g., ['outdoor seating', 'parking', 'wifi', 'reservations']
+  maxGuests: number; // Maximum capacity of the restaurant
+  currGuests?: number; // Current number of guests (for reservations tracking)
 }
+
+//defining a resteruant search interface
 export interface RestaruantSerch{
     date: string;
     time: string;

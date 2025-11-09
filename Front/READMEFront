@@ -1,1 +1,5 @@
-this is the front.
+react- java's libary for UI
+vite- helps to build react fast
+node.js- java's libary
+in src/type we define "resteruant"- what is it for us. id, name, what fields it has, same as reseruantsearch. 
+types- like objects. we define them and we can use those defenitions through the code.
