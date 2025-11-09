@@ -65,8 +65,8 @@ function getDayOfWeek(date) {
 function isRestaurantOpen(restaurant, date, time) {
     // 1. Check data
     if (!restaurant.openingHours) {
-        return false;
-    }  
+        return false; 
+    }
     const dayName = getDayOfWeek(date);
     const hoursToday = restaurant.openingHours[dayName];
     
@@ -92,6 +92,51 @@ function isRestaurantOpen(restaurant, date, time) {
 function isOnBudget(restaurant, budget) {
     // Check both price_range (backend format) and priceRange (frontend format)
     return (restaurant.price_range || restaurant.priceRange) === budget;
+}
+
+/**
+ * Helper Function: Validate Date Format and Check if Not in Past
+ * 
+ * Validates that the date is in YYYY-MM-DD format and is not in the past.
+ * 
+ * @param {string} dateString - Date string to validate (expected format: YYYY-MM-DD)
+ * @returns {Object} - { isValid: boolean, error?: string }
+ */
+function validateDate(dateString) {
+    // Check format: YYYY-MM-DD
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(dateString)) {
+        return {
+            isValid: false,
+            error: 'Date must be in YYYY-MM-DD format'
+        };
+    }
+    
+    // Parse the date
+    const date = new Date(dateString + 'T00:00:00Z');
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+        return {
+            isValid: false,
+            error: 'Invalid date'
+        };
+    }
+    
+    // Check if date is in the past (compare only dates, not time)
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const inputDate = new Date(dateString + 'T00:00:00Z');
+    inputDate.setUTCHours(0, 0, 0, 0);
+    
+    if (inputDate < today) {
+        return {
+            isValid: false,
+            error: 'Date cannot be in the past'
+        };
+    }
+    
+    return { isValid: true };
 }
 
 
@@ -743,6 +788,15 @@ app.get('/api/restaurants', (req, res) => {
         
         // 3. Filter by availability (date and time) - critical filter
         if (date && time) {
+            // Validate date format and check if not in past
+            const dateValidation = validateDate(date);
+            if (!dateValidation.isValid) {
+                return res.status(400).json({
+                    success: false,
+                    message: dateValidation.error
+                });
+            }
+            
             filteredData = filteredData.filter(restaurant => 
                 isRestaurantOpen(restaurant, date, time)
             );
@@ -1042,6 +1096,120 @@ app.delete('/api/restaurants/:id', (req, res) => {
     }
 });
 
+/**
+ * POST /api/reservations
+ * 
+ * Creates a new reservation and updates the restaurant's current guest count.
+ * 
+ * REQUEST BODY:
+ * {
+ *   restaurantId: number,
+ *   date: string (YYYY-MM-DD),
+ *   time: string (HH:MM),
+ *   numGuests: number
+ * }
+ * 
+ * RETURNS: Reservation confirmation
+ * STATUS: 201 if created, 400 if validation fails, 404 if restaurant not found
+ */
+app.post('/api/reservations', (req, res) => {
+    try {
+        const { restaurantId, date, time, numGuests } = req.body;
+        
+        // Validate required fields
+        if (!restaurantId || !date || !time || !numGuests) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields: restaurantId, date, time, and numGuests are required'
+            });
+        }
+        
+        // Validate date format and check if not in past
+        const dateValidation = validateDate(date);
+        if (!dateValidation.isValid) {
+            return res.status(400).json({
+                success: false,
+                message: dateValidation.error
+            });
+        }
+        
+        // Validate numGuests
+        const guests = parseInt(numGuests);
+        if (isNaN(guests) || guests <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'numGuests must be a positive number'
+            });
+        }
+        
+        // Find restaurant
+        const restaurantIdNum = parseInt(restaurantId);
+        if (isNaN(restaurantIdNum)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid restaurant ID format'
+            });
+        }
+        
+        const restaurantIndex = restaurantsData.findIndex(r => 
+            (typeof r.id === 'string' ? parseInt(r.id) : r.id) === restaurantIdNum
+        );
+        
+        if (restaurantIndex === -1) {
+            return res.status(404).json({
+                success: false,
+                message: `Restaurant with ID ${restaurantId} not found`
+            });
+        }
+        
+        const restaurant = restaurantsData[restaurantIndex];
+        
+        // Check if restaurant is open at the requested date and time
+        if (!isRestaurantOpen(restaurant, date, time)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Restaurant is not open at the requested date and time'
+            });
+        }
+        
+        // Check capacity
+        const maxGuests = restaurant.maxGuests || 50;
+        const currGuests = restaurant.currGuests || 0;
+        const availableCapacity = maxGuests - currGuests;
+        
+        if (guests > availableCapacity) {
+            return res.status(400).json({
+                success: false,
+                message: `Not enough capacity. Available: ${availableCapacity}, Requested: ${guests}`
+            });
+        }
+        
+        // Update current guests count
+        restaurantsData[restaurantIndex].currGuests = (restaurant.currGuests || 0) + guests;
+        
+        // Transform restaurant data for response
+        const updatedRestaurant = transformRestaurantToFrontendFormat(restaurantsData[restaurantIndex]);
+        
+        res.status(201).json({
+            success: true,
+            message: 'Reservation created successfully',
+            data: {
+                restaurantId: restaurantIdNum,
+                date,
+                time,
+                numGuests: guests,
+                restaurant: updatedRestaurant
+            }
+        });
+    } catch (error) {
+        console.error('Error creating reservation:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error while creating reservation'
+        });
+    }
+});
+
 // ===================================================================================
 // 5. ERROR HANDLING MIDDLEWARE
 // ===================================================================================
@@ -1064,7 +1232,8 @@ app.use((req, res) => {
             'GET /api/restaurants/:id',
             'POST /api/restaurants',
             'PUT /api/restaurants/:id',
-            'DELETE /api/restaurants/:id'
+            'DELETE /api/restaurants/:id',
+            'POST /api/reservations'
         ]
     });
 });
@@ -1113,6 +1282,7 @@ const server = app.listen(PORT, () => {
     console.log(`   - POST   /api/restaurants`);
     console.log(`   - PUT    /api/restaurants/:id`);
     console.log(`   - DELETE /api/restaurants/:id`);
+    console.log(`   - POST   /api/reservations`);
     console.log('================================================');
 });
 

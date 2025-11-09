@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import type { RestaruantSerch } from '../types/Restaurant';
+import type { RestaurantSearch } from '../types/Restaurant';
 import './SearchForm.css';
 
 /**
@@ -8,7 +8,7 @@ import './SearchForm.css';
  * @param onSubmit - Callback function that receives the search data when form is submitted
  */
 interface SearchFormProps {
-  onSubmit: (searchData: RestaruantSerch) => void;
+  onSubmit: (searchData: RestaurantSearch) => void;
 }
 
 /**
@@ -27,7 +27,7 @@ export default function SearchForm({ onSubmit }: SearchFormProps) {
    * - Required fields: date, time, numGuests (must have values)
    * - Optional fields: budget, cuisine, location, rating (can be undefined/empty)
    */
-  const [formData, setFormData] = useState<RestaruantSerch>({
+  const [formData, setFormData] = useState<RestaurantSearch>({
     date: '',
     time: '',
     numGuests: 1,
@@ -72,7 +72,7 @@ export default function SearchForm({ onSubmit }: SearchFormProps) {
     e.preventDefault();
     
     // Start with required fields - these must always be included
-    const searchData: RestaruantSerch = {
+    const searchData: RestaurantSearch = {
       date: formData.date,
       time: formData.time,
       numGuests: formData.numGuests,
@@ -105,15 +105,15 @@ export default function SearchForm({ onSubmit }: SearchFormProps) {
    * Used by all input fields to keep the form data in sync with user input.
    * 
    * How it works:
-   * 1. Takes the field name (key from RestaruantSerch interface) and new value
+   * 1. Takes the field name (key from RestaurantSearch interface) and new value
    * 2. Uses setFormData with a function that receives the previous state
    * 3. Returns a new object with all previous values spread, plus the updated field
    * 4. This ensures React knows the state changed and re-renders the component
    * 
-   * @param field - The name of the form field to update (must be a key from RestaruantSerch)
+   * @param field - The name of the form field to update (must be a key from RestaurantSearch)
    * @param value - The new value for that field (can be string or number)
    */
-  const handleChange = (field: keyof RestaruantSerch, value: string | number) => {
+  const handleChange = (field: keyof RestaurantSearch, value: string | number) => {
     // Update form state by merging previous state with the changed field
     // Using functional update ensures we have the latest state
     setFormData((prev) => ({

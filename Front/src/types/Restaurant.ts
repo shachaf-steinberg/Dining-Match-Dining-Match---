@@ -27,8 +27,8 @@ export interface Restaurant {
   currGuests?: number; // Current number of guests (for reservations tracking)
 }
 
-//defining a resteruant search interface
-export interface RestaruantSerch{
+//defining a restaurant search interface
+export interface RestaurantSearch {
     date: string;
     time: string;
     numGuests: number;
